@@ -19,6 +19,7 @@ var fluid = new NavierStokes({
 var canvas = document.getElementById('d');
 var display = new Display(canvas, fluid);
 var user = new User(canvas, fluid, display);
+var paused = false;
 
 var reset = () => {
 	fluid.init();
@@ -27,6 +28,7 @@ var reset = () => {
 };
 
 var loop = () => {
+	if (paused) return;
 	fluid.update();
 	requestAnimationFrame(loop);
 };
@@ -34,6 +36,13 @@ var loop = () => {
 reset();
 loop();
 
+window.top.onblur = () => paused = true;
+window.top.onfocus = () => {
+	if (paused){
+		paused = false;
+		loop();
+	}
+};
 
 // dat.GUI Settings
 var gui = new window.dat.GUI();

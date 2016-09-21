@@ -51,147 +51,114 @@ class NavierStokes {
 		this.set_bnd(1, this.U_prev);
 		this.set_bnd(2, this.V_prev);
 
-		this.project(this.U_prev, this.V_prev, this.U, this.V);
-		this.advect(1, this.U, this.U_prev, this.U_prev, this.V_prev);
-		this.advect(2, this.V, this.V_prev, this.U_prev, this.V_prev);
-		this.project(this.U, this.V, this.U_prev, this.V_prev);
+		this.project();
 
-		this.advect(0, this.D, this.D_prev, this.U, this.V);
+		this.advect(this.U, this.U_prev);
+		this.set_bnd(1, this.U);
 
-		this.callbackDisplay(this.D, this.U, this.V, this.resolution);
+		this.advect(this.V, this.V_prev);
+		this.set_bnd(2, this.V);
+
+		this.swap('U', 'U_prev');
+		this.swap('V', 'V_prev');
+
+		this.project();
+		this.advect(this.D, this.D_prev);
+		this.set_bnd(0, this.D);
+
+		this.callbackDisplay(this.D_prev, this.U_prev, this.V_prev, this.resolution);
+
+		this.swap('U', 'U_prev');
+		this.swap('V', 'V_prev');
 	}
 
-	project(u, v, p, div) {
-		var i, j, k, thisRow, nextRow, lastRow, valueBefore, valueNext, prevX;
+	swap(prop1, prop2){
+		var t = this[prop1];
+		this[prop1] = this[prop2];
+		this[prop2] = t;
+	}
 
-		var prevRow, to;
-		for (i = 1; i <= this.resolution; i++) {
-			prevRow = (i - 1) * this.rows;
-			thisRow = i * this.rows;
-			nextRow = (i + 1) * this.rows;
+	project() {
+		var u0 = this.U_prev;
+		var v0 = this.V_prev;
+		var u = this.U;
+		var v = this.V;
+		var rows = this.rows;
 
-			valueBefore = thisRow - 1;
-			valueNext = thisRow + 1;
-
-			to = this.resolution + valueNext;
-			for (k = valueNext; k < to; k++) {
-				p[k] = 0;
-				valueNext++;
-				valueBefore++;
-				nextRow++;
-				prevRow++;
-				div[k] = (u[valueNext] - u[valueBefore] + v[nextRow] - v[prevRow]) * -0.5 / this.resolution * (1 + this.gridmodify);
+		var mult = (1 + this.gridmodify) / 2 / this.resolution;
+		for (var i = 1; i < rows - 1; i++){
+			for (var k = 1; k < rows - 1; k++){
+				var x = i * rows + k;
+				u[x] = 0;
+				v[x] = mult * (u0[x - 1] - u0[x + 1] + v0[x - rows] - v0[x + rows]);
 			}
 		}
 
-		// for (i = 1; i <= this.resolution; i++) {
-		// 	for (k = 0; k < this.resolution; k++){
-		// 		p[k + i * this.rows + 1] = 0;
-		// 		div[k + i * this.rows + 1] = (u[i * this.rows + 1 + k] - u[i * this.rows + k] + v[(i + 1) * this.rows + k + 1] - v[(i - 1) * this.rows + k + 1]) * -0.5 / this.resolution * (1 + this.gridmodify);
-		// 	}
-		// }
+		this.set_bnd(0, v);
+		this.set_bnd(0, u);
 
-		this.set_bnd(0, div);
-		this.set_bnd(0, p);
-
-		for (k = 0; k < this.iterations; k++) {
-			for (j = 1; j <= this.resolution; j++) {
-				lastRow = (j - 1) * this.rows;
-				thisRow = j * this.rows;
-				nextRow = (j + 1) * this.rows;
-				prevX = p[thisRow];
-				thisRow++;
-				for (i = 1; i <= this.resolution; i++) {
-					lastRow++;
-					thisRow++;
-					nextRow++;
-					p[thisRow - 1] = prevX = (div[thisRow - 1] + p[lastRow] + p[thisRow] + p[nextRow] + prevX) * this.fract;
+		for (var k = 0; k < this.iterations; k++){
+			for (var j = 1; j < rows - 1; j++) {
+				for (var i = 1; i < rows - 1; i++){
+					var x = j * rows + i;
+					u[x] = this.fract * (v[x] + u[x - rows] + u[x + 1] + u[x + rows] + u[x - 1]);
 				}
 			}
-			this.set_bnd(0, p);
+			this.set_bnd(0, u);
 		}
 
-		for (j = 1; j <= this.resolution; j++) {
-			lastRow = (j - 1) * this.rows;
-			thisRow = j * this.rows;
-			nextRow = (j + 1) * this.rows;
-
-			valueBefore = thisRow - 1;
-			valueNext = thisRow + 1;
-
-			for (i = 1; i <= this.resolution; i++) {
-				thisRow++;
-				valueNext++;
-				valueBefore++;
-				nextRow++;
-				lastRow++;
-				u[thisRow] -= this.resolution * 0.5 * (p[valueNext] - p[valueBefore]);
-				v[thisRow] -= this.resolution * 0.5 * (p[nextRow] - p[lastRow]);
+		var mult = this.resolution / 2;
+		for (var j = 1; j < rows - 1; j++) {
+			for (var i = 1; i < rows - 1; i++) {
+				var x = j * rows + i;
+				u0[x] += mult * (u[x - 1] - u[x + 1]);
+				v0[x] += mult * (u[x - rows] - u[x + rows]);
 			}
 		}
-		this.set_bnd(1, u);
-		this.set_bnd(2, v);
+
+		this.set_bnd(1, u0);
+		this.set_bnd(2, v0);
 	}
 
-	advect(b, d, d0, u, v) {
-		for (var j = 1; j <= this.resolution; j++) {
-			var pos = j * this.rows;
-			for (var k = 1; k <= this.resolution; k++) {
-				pos++;
-				var x = Math.min(this.resolution + 0.5, Math.max(0.5, k - this.dt * this.resolution * u[pos]));
-				var y = Math.min(this.resolution + 0.5, Math.max(0.5, j - this.dt * this.resolution * v[pos]));
-				var i0 = x | 0;
-				var i1 = i0 + 1;
-				var j0 = y | 0;
-				var s1 = x - i0;
-				var t1 = y - j0;
-				var t0 = 1 - t1;
-				var toR1 = j0 * this.rows;
-				var toR2 = (j0 + 1) * this.rows;
-				d[pos] = (1 - s1) * (t0 * d0[i0 + toR1] + t1 * d0[i0 + toR2]) + s1 * (t0 * d0[i1 + toR1] + t1 * d0[i1 + toR2]);
+	advect(d, d0) {
+		for (var j = 1; j < this.rows - 1; j++) {
+			for (var k = 1; k < this.rows - 1; k++) {
+				var dex = j * this.rows + k;
+				var x = Math.min(this.resolution + 0.5, Math.max(0.5, k - this.dt * this.resolution * this.U_prev[dex]));
+				var y = Math.min(this.resolution + 0.5, Math.max(0.5, j - this.dt * this.resolution * this.V_prev[dex]));
+				var x0 = x | 0;
+				var x1 = x0 + 1;
+				var s1 = x - x0;
+				var y0 = y | 0;
+				var t1 = y - y0;
+				var toR1 = y0 * this.rows;
+				var toR2 = toR1 + this.rows;
+				d[dex] =
+					(1 - s1) * ((1 - t1) * d0[x0 + toR1] + t1 * d0[x0 + toR2]) +
+					(0 + s1) * ((1 - t1) * d0[x1 + toR1] + t1 * d0[x1 + toR2]);
 			}
 		}
-		this.set_bnd(b, d);
 	}
-	// Calculate Boundary's
+
 	set_bnd(b, x) {
-		var i;
-		switch (b) {
-		case 1:
-			for (i = 1; i <= this.resolution; i++) {
-				x[i] = x[i + this.rows];
-				x[i + (this.resolution + 1) * this.rows] = x[i + this.resolution * this.rows];
-				x[0 + i * this.rows] = -x[1 + i * this.rows];
-				x[this.resolution + 1 + i * this.rows] = -x[this.resolution + i * this.rows];
-			}
-			break;
-		case 2:
-			for (i = 1; i <= this.resolution; i++) {
-				x[i] = -x[i + this.rows];
-				x[i + (this.resolution + 1) * this.rows] = -x[i + this.resolution * this.rows];
-				x[0 + i * this.rows] = x[1 + i * this.rows];
-				x[this.resolution + 1 + i * this.rows] = x[this.resolution + i * this.rows];
-			}
-			break;
-		default:
-			for (i = 1; i <= this.resolution; i++) {
-				x[i] = x[i + this.rows];
-				x[i + (this.resolution + 1) * this.rows] = x[i + this.resolution * this.rows];
-				x[0 + i * this.rows] = x[1 + i * this.rows];
-				x[this.resolution + 1 + i * this.rows] = x[this.resolution + i * this.rows];
-			}
-		}
-		// Boundes of the Canvas
-		var topPos = 0 + (this.resolution + 1) * this.rows;
-		x[0] = (x[1] + x[this.rows]) / 2;
-		x[topPos] = (x[1 + topPos] + x[this.resolution + 0 * this.rows]) / 2;
-		x[this.resolution + 1] = (x[this.resolution] + x[this.resolution + 1 + this.rows]) / 2;
-		x[this.resolution + 1 + topPos] = (x[this.resolution + topPos] + x[this.resolution + 1 + this.resolution * this.rows]);
+		var rows = this.rows;
 
+		var negateH = b == 2 ? -1 : 1;
+		var negateV = b == 1 ? -1 : 1;
+		for (var i = 1; i < rows - 1; i++) {
+			x[i] 											= negateH * x[i + rows];
+			x[i + rows * (rows - 1)] 	= negateH * x[i + (rows - 2) * rows];
+			x[i * rows] 							= negateV * x[1 + i * rows];
+			x[(i + 1) * rows - 1] 		= negateV * x[rows - 2 + i * rows];
+		}
+
+		var topPos = (rows - 1) * rows;
+		x[0] = (x[1] + x[rows]) / 2;
+		x[topPos] = (x[1 + topPos] + x[(rows - 2) + 0 * rows]) / 2;
+		x[rows - 1] = (x[(rows - 2)] + x[rows - 1 + rows]) / 2;
+		x[rows - 1 + topPos] = (x[(rows - 2) + topPos] + x[rows - 1 + (rows - 2) * rows]);
 	}
 
 }
 
 module.exports = NavierStokes;
-
-// this\.IX\[([^\]]+)\]\[([^\]]+)\]
