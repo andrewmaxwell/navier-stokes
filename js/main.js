@@ -3,87 +3,47 @@ console.clear();
 // Adapted from https://codepen.io/FWeinb/pen/JhzvI
 // Based on http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf
 
-const NavierStokes = require('./navierStokes');
+const Fluid = require('./fluid');
 const Display = require('./display');
-const User = require('./user');
+const Demo = require('./demo');
 
-var fluid = new NavierStokes({
-	callbackDisplay(D, U, V, size) {
-		display.density(D, U, V, size);
+var params = {
+	rows: 100,
+	iterations: 50,
+	diffusion: 0.999,
+	speed: 0.1,
+	pushStrength: 1,
+	pushAmount: 5,
+	red: 1300,
+	green: 255,
+	blue: 1300
+};
+
+var fluid = window.top.fluid = new Fluid(params);
+var display = new Display(params);
+
+new Demo({
+	reset(){
+		fluid.reset();
 	},
-	callbackUser(D, U, V, size) {
-		user.interact(D, U, V, size);
+	loop(){
+		fluid.update();
+		display.render(fluid);
 	}
 });
 
-var canvas = document.getElementById('d');
-var display = new Display(canvas, fluid);
-var user = new User(canvas, fluid, display);
-var paused = false;
-
-var reset = () => {
-	fluid.init();
-	user.setCanvasSize(fluid.resolution);
-	display.init(fluid.resolution);
+display.topCanvas.onmousemove = e => {
+	var x = e.offsetX / display.width;
+	var y = e.offsetY / display.width;
+	var px = x - e.movementX / display.width;
+	var py = y - e.movementY / display.width;
+	fluid.interact(x, y, px, py);
 };
 
-var loop = () => {
-	if (paused) return;
-	fluid.update();
-	requestAnimationFrame(loop);
-};
-
-reset();
-loop();
-
-window.top.onblur = () => paused = true;
-window.top.onfocus = () => {
-	if (paused){
-		paused = false;
-		loop();
-	}
-};
-
-// dat.GUI Settings
 var gui = new window.dat.GUI();
-var fluidFolder = gui.addFolder('Fluid');
-
-fluidFolder.add(fluid, 'resolution', [64, 128, 256, 512]).onFinishChange(function(e) {
-	fluid.resolution = parseInt(e);
-	reset();
-});
-
-fluidFolder.add(fluid, 'iterations', 1, 100).onFinishChange(function(e) {
-	fluid.iterations = parseInt(e);
-});
-
-fluidFolder.add(fluid, 'diffusion', 0.9000000, 1.1000000);
-fluidFolder.add(fluid, 'dt', -1, 1);
-
-fluidFolder.add(user, 'insertedDensity', 0, 200).onFinishChange(function(e) {
-	user.insertedDensity = parseInt(e);
-});
-fluidFolder.open();
-
-var displayFolder = gui.addFolder('Display');
-
-displayFolder.add(user, 'displaySize', 0, 900).onChange(function(e) {
-	user.setDisplay(e);
-});
-
-
-var currColorFunc = displayFolder.add(display, 'currColorFunc', {
-	'Black & White': 'BW',
-	'Color': 'Color',
-	'User Defined': 'User'
-});
-var setColorFuncToUser = function() {
-	display.currColorFunc = 'User';
-	currColorFunc.updateDisplay();
-};
-displayFolder.add(display.colorUser, 'R', 0, 50).name('R:').onChange(setColorFuncToUser);
-displayFolder.add(display.colorUser, 'G', 0, 1000).name('G:').onChange(setColorFuncToUser);
-displayFolder.add(display.colorUser, 'B', 0, 50).name('B:').onChange(setColorFuncToUser);
-displayFolder.open();
-
-gui.add(user, 'clearDisplay').name('Clear');
+gui.add(params, 'rows', 50, 300).step(1).onChange(() => fluid.reset());
+gui.add(params, 'iterations', 1, 100);
+gui.add(params, 'diffusion', 0.99, 1);
+gui.add(params, 'speed', 0, 0.2);
+gui.add(params, 'pushAmount', 0, 200);
+gui.add(params, 'pushStrength', 0, 100);
