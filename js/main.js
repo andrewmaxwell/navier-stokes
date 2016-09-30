@@ -5,6 +5,7 @@ console.clear();
 
 const Fluid = require('./fluid');
 const Display = require('./display');
+// const ParticleSystem = require('./particleSystem');
 const Demo = require('./demo');
 
 var params = {
@@ -21,23 +22,26 @@ var params = {
 
 var fluid = window.top.fluid = new Fluid(params);
 var display = new Display(params);
+// var particles = window.top.particles = new ParticleSystem(params);
 
 new Demo({
 	reset(){
 		fluid.reset();
 	},
 	loop(){
-		fluid.update();
-		display.render(fluid);
+		fluid.iterate();
+		// particles.iterate(fluid);
+		display.renderFluid(fluid);
+		// display.renderParticles(particles);
 	}
 });
 
 display.topCanvas.onmousemove = e => {
 	var x = e.offsetX / display.width;
 	var y = e.offsetY / display.width;
-	var px = x - e.movementX / display.width;
-	var py = y - e.movementY / display.width;
-	fluid.interact(x, y, px, py);
+	var dx = e.movementX / display.width;
+	var dy = e.movementY / display.width;
+	fluid.interact(x, y, dx, dy);
 };
 
 var gui = new window.dat.GUI();
@@ -45,5 +49,5 @@ gui.add(params, 'rows', 50, 300).step(1).onChange(() => fluid.reset());
 gui.add(params, 'iterations', 1, 100);
 gui.add(params, 'diffusion', 0.99, 1);
 gui.add(params, 'speed', 0, 0.2);
-gui.add(params, 'pushAmount', 0, 200);
-gui.add(params, 'pushStrength', 0, 100);
+gui.add(params, 'pushAmount', 0, 10);
+gui.add(params, 'pushStrength', 0, 10);

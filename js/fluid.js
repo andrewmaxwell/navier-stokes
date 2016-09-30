@@ -8,14 +8,16 @@ class Fluid {
 		var {rows} = this.params;
 
 		var n = rows * rows;
-		this.x0 = new Float32Array(n);
-		this.y0 = new Float32Array(n);
-		this.d0 = new Float32Array(n);
-		this.x1 = new Float32Array(n);
-		this.y1 = new Float32Array(n);
-		this.d1 = new Float32Array(n);
+		this.xs = new Float32Array(n);
+		this.ys = new Float32Array(n);
+		this.dn = new Float32Array(n);
 
-		this.pv = new Float32Array(n);
+		this.temps = [
+			new Float32Array(n),
+			new Float32Array(n),
+			new Float32Array(n)
+		];
+
 		this.cp = new Float32Array(n);
 
 		var ix = [];
@@ -27,21 +29,34 @@ class Fluid {
 		this.ix = Float32Array.from(ix);
 	}
 
-	update(){
-		var {rows, iterations, diffusion, speed} = this.params;
-		var {x0, y0, d0, x1, y1, d1, pv, cp, ix} = this;
-		var pairs = [[x0, x1], [y0, y1], [d0, d1]];
+	iterate(){
+		this.diffuse();
+		this.calculatePressures();
+		this.calculateVelocities();
+		this.advect();
+	}
 
+	diffuse(){
+		var {rows, diffusion} = this.params;
+		var {dn} = this;
 		for (var i = 0; i < rows * rows; i++){
-			d1[i] = d0[i] * diffusion;
-			x1[i] = x0[i] * diffusion;
-			y1[i] = y0[i] * diffusion;
+			// xs[i] *= diffusion;
+			// ys[i] *= diffusion;
+			dn[i] *= diffusion;
 		}
+	}
 
+	calculatePressures(){
+		var {rows, iterations} = this.params;
+		var {ix, temps, cp, xs, ys} = this;
+
+		var pv = temps[0];
+
+		// pressures from velocities
 		var mult = 0.5 / rows;
 		for (var i = 0; i < ix.length; i++){
 			var n = ix[i];
-			pv[n] = (x1[n - 1] - x1[n + 1] + y1[n - rows] - y1[n + rows]) * mult;
+			pv[n] = (xs[n - 1] - xs[n + 1] + ys[n - rows] - ys[n + rows]) * mult;
 		}
 
 		cp.fill(0); // cummulative pressure
@@ -53,58 +68,72 @@ class Fluid {
 				cp[n] = (pv[n] + cp[n - 1] + cp[n + 1] + cp[n - rows] + cp[n + rows]) / 4;
 			}
 			this.setEdges(cp, 1, 1);
-		}
 
-		// add to velocity of each cell
+		}
+	}
+
+	calculateVelocities(){
+		var {rows} = this.params;
+		var {ix, xs, ys, cp} = this;
+
 		var mult = rows / 2;
 		for (var i = 0; i < ix.length; i++){
 			var n = ix[i];
-			x1[n] += mult * (cp[n - 1] - cp[n + 1]);
-			y1[n] += mult * (cp[n - rows] - cp[n + rows]);
+			xs[n] += mult * (cp[n - 1] - cp[n + 1]);
+			ys[n] += mult * (cp[n - rows] - cp[n + rows]);
 		}
 
-		this.setEdges(x1, 1, -1);
-		this.setEdges(y1, -1, 1);
+		this.setEdges(xs, 1, -1);
+		this.setEdges(ys, -1, 1);
+	}
 
-		// ADVECT
-		for (var j = 1; j < rows - 1; j++){
-			for (var k = 1; k < rows - 1; k++){
+	advect(){
+
+		var {rows, speed} = this.params;
+		var {xs, ys, dn, temps} = this;
+
+		var arrs = [xs, ys, dn];
+
+		for (var j = 0; j < rows; j++){
+			for (var k = 0; k < rows; k++){
 				var n = j * rows + k;
 
-				var x = Math.min(rows - 1.5, Math.max(0.5, k - speed * (rows - 2) * x1[n]));
+				var x = Math.min(rows - 1.5, Math.max(0.5, k - speed * (rows - 2) * xs[n]));
 				var ltCol = x | 0;
 				var rtCol = ltCol + 1;
 				var distFromLeft = x - ltCol;
 
-				var y = Math.min(rows - 1.5, Math.max(0.5, j - speed * (rows - 2) * y1[n]));
+				var y = Math.min(rows - 1.5, Math.max(0.5, j - speed * (rows - 2) * ys[n]));
 				var yUp = y | 0;
 				var distFromAbove = y - yUp;
 				var upRow = yUp * rows;
 				var dnRow = upRow + rows;
 
-				for (var i = 0; i < pairs.length; i++){
-					var a = pairs[i][0];
-					var a0 = pairs[i][1];
-					a[n] =
+				for (var i = 0; i < arrs.length; i++){
+
+					var arr = arrs[i];
+					var temp = temps[i];
+
+					temp[n] =
 						distFromLeft * (
-							distFromAbove 			* a0[rtCol + dnRow] +
-							(1 - distFromAbove) * a0[rtCol + upRow]
+							distFromAbove 			* arr[rtCol + dnRow] +
+							(1 - distFromAbove) * arr[rtCol + upRow]
 						) +
 						(1 - distFromLeft) * (
-							distFromAbove 			* a0[ltCol + dnRow] +
-							(1 - distFromAbove) * a0[ltCol + upRow]
+							distFromAbove 			* arr[ltCol + dnRow] +
+							(1 - distFromAbove) * arr[ltCol + upRow]
 						);
 				}
 			}
 		}
 
-		this.setEdges(x0, 1, -1);
-		this.setEdges(y0, -1, 1);
-		this.setEdges(d0, 1, 1);
+		[this.xs, this.temps[0]] = [temps[0], xs];
+		[this.ys, this.temps[1]] = [temps[1], ys];
+		[this.dn, this.temps[2]] = [temps[2], dn];
 
-		d1.fill(0);
-		x1.fill(0);
-		y1.fill(0);
+		this.setEdges(xs, 1, -1);
+		this.setEdges(ys, -1, 1);
+		this.setEdges(dn, 1, 1);
 	}
 
 	setEdges(a, horizMult, vertiMult){
@@ -123,24 +152,24 @@ class Fluid {
 		a[rows - 1 + bottom] = (a[(rows - 2) + bottom] + a[rows - 1 + (rows - 2) * rows]) / 2;
 	}
 
-	interact(x1, y1, x2, y2){
+	interact(x1, y1, dx, dy){
 		var {rows, pushStrength, pushAmount} = this.params;
 
-		var dx = (x1 - x2) * rows;
-		var dy = (y1 - y2) * rows;
+		dx *= rows;
+		dy *= rows;
 		var len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
 		for (var i = 0; i < len; i++) {
 			var x = Math.floor(rows * x1 + i / len * dx);
 			var y = Math.floor(rows * y1 + i / len * dy);
 			var n = x + y * rows;
-			this.x0[n] = dx * pushStrength;
-			this.y0[n] = dy * pushStrength;
-			this.d0[n] = pushAmount;
+			this.xs[n] = dx * pushStrength;
+			this.ys[n] = dy * pushStrength;
+			this.dn[n] = pushAmount;
 		}
 
-		this.setEdges(this.x0, 1, -1);
-		this.setEdges(this.y0, -1, 1);
-		this.setEdges(this.d0, 1, 1);
+		this.setEdges(this.xs, 1, -1);
+		this.setEdges(this.ys, -1, 1);
+		this.setEdges(this.dn, 1, 1);
 	}
 }
 
