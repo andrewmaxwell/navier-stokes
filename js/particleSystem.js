@@ -12,15 +12,15 @@ class ParticleSystem {
 		}
 	}
 	iterate(fluid){
-		var {rows} = this.params;
+		var {rows, speed} = this.params;
 		var {xc, yc, px, py, num} = this;
 
 		for (var i = 0; i < num; i++){
-			var n = rows * (yc[i] | 0) + (xc[i] | 0);
+			var n = rows * Math.floor(yc[i]) + Math.floor(xc[i]);
 			px[i] = xc[i];
 			py[i] = yc[i];
-			xc[i] += fluid.xs[n] * 10;
-			yc[i] += fluid.ys[n] * 10;
+			xc[i] += fluid.xs[n] * speed;
+			yc[i] += fluid.ys[n] * speed;
 
 			if (xc[i] < 0 || xc[i] >= rows || yc[i] < 0 || yc[i] >= rows){
 				xc[i] = px[i] = (xc[i] + rows) % rows;

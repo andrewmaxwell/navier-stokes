@@ -52,27 +52,25 @@ class Fluid {
 	}
 
 	calculatePressures(){
-		var {rows} = this.params;
 		var {temps, xs, ys, up, dw, lt, rt} = this;
 
 		var pv = temps[0];
 
 		// pressures from velocities
-		var mult = 0.5 / rows;
 		for (var i = 0; i < xs.length; i++){
-			pv[i] = (xs[lt[i]] - xs[rt[i]] + ys[up[i]] - ys[dw[i]]) * mult;
+			pv[i] = xs[lt[i]] - xs[rt[i]] + ys[up[i]] - ys[dw[i]];
 		}
 
 		return pv;
 	}
 
 	calculateCummulativePressures(initialPressures){
-		var {iterations, wavy} = this.params;
+		var {iterations} = this.params;
 		var {temps, up, dw, lt, rt} = this;
 
 		var k, i, t, cp = temps[1], cp_temp = temps[2];
 
-		if (!wavy) cp.fill(0); // cummulative pressure
+		cp.fill(0); // cummulative pressure
 
 		for (k = 0; k < iterations; k++){
 
@@ -90,13 +88,10 @@ class Fluid {
 	}
 
 	calculateVelocities(pressure){
-		var {rows} = this.params;
 		var {xs, ys, up, dw, lt, rt} = this;
-
-		var mult = rows / 2;
 		for (var i = 0; i < xs.length; i++){
-			xs[i] += mult * (pressure[lt[i]] - pressure[rt[i]]);
-			ys[i] += mult * (pressure[up[i]] - pressure[dw[i]]);
+			xs[i] += (pressure[lt[i]] - pressure[rt[i]]) / 2;
+			ys[i] += (pressure[up[i]] - pressure[dw[i]]) / 2;
 		}
 	}
 
@@ -120,7 +115,7 @@ class Fluid {
 				var distFromLeft = x - x0;
 				var distFromAbove = y - y0;
 
-				var t = (((y0 % rows) + rows) % rows) * rows + ((x0 % rows) + rows) % rows;
+				var t = ((y0 + 1e6 * rows) % rows) * rows + (x0 + 1e6 * rows) % rows;
 
 				for (var i = 0; i < arrs.length; i++){
 

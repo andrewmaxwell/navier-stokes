@@ -14,7 +14,6 @@ var params = {
 	iterations: 50,
 	diffusion: 0.999,
 	speed: 10,
-	wavy: false,
 	pushStrength: 1,
 	pushAmount: 5,
 	red: 1300,
@@ -51,6 +50,5 @@ gui.add(params, 'rows', 50, 300).step(1).onChange(() => fluid.reset());
 gui.add(params, 'iterations', 1, 200);
 gui.add(params, 'diffusion', 0.99, 1);
 gui.add(params, 'speed', 0, 100);
-// gui.add(params, 'wavy');
 gui.add(params, 'pushAmount', 0, 10);
 gui.add(params, 'pushStrength', 0, 10);
