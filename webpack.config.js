@@ -8,7 +8,7 @@ module.exports = {
 		preLoaders: [
 			{
 				test: /\.js$/,
-				loader: "eslint-loader?{extends:'eslint:recommended',parserOptions:{sourceType:'module'},rules:{indent:[2,'tab'],quotes:[2,'single'],semi:[2,'always'],'no-console':[0],'no-unused-vars':[2]},env:{es6:true,browser:true}}",
+				loader: "eslint-loader?{extends:'eslint:recommended',parserOptions:{sourceType:'module'},rules:{indent:[2,'tab'],quotes:[2,'single'],semi:[2,'always'],'no-console':[0],'no-unused-vars':[1]},env:{es6:true,browser:true}}",
 				exclude: /node_modules/,
 			},
 		],

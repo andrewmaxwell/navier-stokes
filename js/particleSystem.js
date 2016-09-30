@@ -1,7 +1,7 @@
 class ParticleSystem {
 	constructor(params){
 		this.params = params;
-		this.num = 10000;
+		this.num = 5000;
 		this.xc = new Float32Array(this.num);
 		this.yc = new Float32Array(this.num);
 		this.px = new Float32Array(this.num);
@@ -13,17 +13,18 @@ class ParticleSystem {
 	}
 	iterate(fluid){
 		var {rows} = this.params;
+		var {xc, yc, px, py, num} = this;
 
-		for (var i = 0; i < this.num; i++){
-			var n = rows * (this.yc[i] | 0) + (this.xc[i] | 0);
-			this.px[i] = this.xc[i];
-			this.py[i] = this.yc[i];
-			this.xc[i] += fluid.xs[n] * 10;
-			this.yc[i] += fluid.ys[n] * 10;
+		for (var i = 0; i < num; i++){
+			var n = rows * (yc[i] | 0) + (xc[i] | 0);
+			px[i] = xc[i];
+			py[i] = yc[i];
+			xc[i] += fluid.xs[n] * 10;
+			yc[i] += fluid.ys[n] * 10;
 
-			if (this.xc[i] < 0 || this.xc[i] >= rows || this.yc[i] < 0 || this.yc[i] >= rows){
-				this.xc[i] = this.px[i] = rows * Math.random();
-				this.yc[i] = this.py[i] = rows * Math.random();
+			if (xc[i] < 0 || xc[i] >= rows || yc[i] < 0 || yc[i] >= rows){
+				xc[i] = px[i] = (xc[i] + rows) % rows;
+				yc[i] = py[i] = (yc[i] + rows) % rows;
 			}
 		}
 	}

@@ -3,16 +3,18 @@ console.clear();
 // Adapted from https://codepen.io/FWeinb/pen/JhzvI
 // Based on http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf
 
-const Fluid = require('./fluid');
+// const Fluid = require('./containedFluid');
+const Fluid = require('./toroidFluid');
 const Display = require('./display');
-// const ParticleSystem = require('./particleSystem');
+const ParticleSystem = require('./particleSystem');
 const Demo = require('./demo');
 
 var params = {
 	rows: 100,
 	iterations: 50,
 	diffusion: 0.999,
-	speed: 0.1,
+	speed: 10,
+	wavy: false,
 	pushStrength: 1,
 	pushAmount: 5,
 	red: 1300,
@@ -22,7 +24,7 @@ var params = {
 
 var fluid = window.top.fluid = new Fluid(params);
 var display = new Display(params);
-// var particles = window.top.particles = new ParticleSystem(params);
+var particles = window.top.particles = new ParticleSystem(params);
 
 new Demo({
 	reset(){
@@ -30,9 +32,9 @@ new Demo({
 	},
 	loop(){
 		fluid.iterate();
-		// particles.iterate(fluid);
+		particles.iterate(fluid);
 		display.renderFluid(fluid);
-		// display.renderParticles(particles);
+		display.renderParticles(particles);
 	}
 });
 
@@ -46,8 +48,9 @@ display.topCanvas.onmousemove = e => {
 
 var gui = new window.dat.GUI();
 gui.add(params, 'rows', 50, 300).step(1).onChange(() => fluid.reset());
-gui.add(params, 'iterations', 1, 100);
+gui.add(params, 'iterations', 1, 200);
 gui.add(params, 'diffusion', 0.99, 1);
-gui.add(params, 'speed', 0, 0.2);
+gui.add(params, 'speed', 0, 100);
+// gui.add(params, 'wavy');
 gui.add(params, 'pushAmount', 0, 10);
 gui.add(params, 'pushStrength', 0, 10);

@@ -18,37 +18,36 @@ class Fluid {
 			new Float32Array(n)
 		];
 
-		this.cp = new Float32Array(n);
-
 		var ix = [];
 		for (var i = 1; i < rows - 1; i++){
 			for (var k = 1; k < rows - 1; k++){
 				ix.push(i * rows + k);
 			}
 		}
-		this.ix = Float32Array.from(ix);
+		this.ix = Uint16Array.from(ix);
 	}
 
 	iterate(){
 		this.diffuse();
-		this.calculatePressures();
-		this.calculateVelocities();
+
+		var p1 = this.calculatePressures();
+		var p2 = this.calculateCummulativePressures(p1);
+
+		this.calculateVelocities(p2);
 		this.advect();
 	}
 
 	diffuse(){
-		var {rows, diffusion} = this.params;
+		var {diffusion} = this.params;
 		var {dn} = this;
-		for (var i = 0; i < rows * rows; i++){
-			// xs[i] *= diffusion;
-			// ys[i] *= diffusion;
+		for (var i = 0; i < dn.length; i++){
 			dn[i] *= diffusion;
 		}
 	}
 
 	calculatePressures(){
-		var {rows, iterations} = this.params;
-		var {ix, temps, cp, xs, ys} = this;
+		var {rows} = this.params;
+		var {ix, temps, xs, ys} = this;
 
 		var pv = temps[0];
 
@@ -59,28 +58,44 @@ class Fluid {
 			pv[n] = (xs[n - 1] - xs[n + 1] + ys[n - rows] - ys[n + rows]) * mult;
 		}
 
-		cp.fill(0); // cummulative pressure
-		for (var k = 0; k < iterations; k++){
-
-			// (sum of each cells' pv and its neighbors' cp) / 4, store in cp
-			for (var i = 0; i < ix.length; i++){
-				var n = ix[i];
-				cp[n] = (pv[n] + cp[n - 1] + cp[n + 1] + cp[n - rows] + cp[n + rows]) / 4;
-			}
-			this.setEdges(cp, 1, 1);
-
-		}
+		return pv;
 	}
 
-	calculateVelocities(){
+	calculateCummulativePressures(initialPressures){
+		var {rows, iterations, wavy} = this.params;
+		var {ix, temps} = this;
+
+		var k, i, n, t, cp = temps[1], cp_temp = temps[2];
+
+		if (!wavy) cp.fill(0); // cummulative pressure
+
+		for (k = 0; k < iterations; k++){
+
+			// (sum of each cells' initialPressure and its neighbors' cp) / 4, store in cp
+			for (i = 0; i < ix.length; i++){
+				n = ix[i];
+				cp_temp[n] = (initialPressures[n] + cp[n - 1] + cp[n + 1] + cp[n - rows] + cp[n + rows]) / 4;
+			}
+
+			t = cp;
+			cp = cp_temp;
+			cp_temp = t;
+
+			this.setEdges(cp, 1, 1);
+		}
+
+		return cp;
+	}
+
+	calculateVelocities(pressure){
 		var {rows} = this.params;
-		var {ix, xs, ys, cp} = this;
+		var {ix, xs, ys} = this;
 
 		var mult = rows / 2;
 		for (var i = 0; i < ix.length; i++){
 			var n = ix[i];
-			xs[n] += mult * (cp[n - 1] - cp[n + 1]);
-			ys[n] += mult * (cp[n - rows] - cp[n + rows]);
+			xs[n] += mult * (pressure[n - 1] - pressure[n + 1]);
+			ys[n] += mult * (pressure[n - rows] - pressure[n + rows]);
 		}
 
 		this.setEdges(xs, 1, -1);
@@ -98,12 +113,12 @@ class Fluid {
 			for (var k = 0; k < rows; k++){
 				var n = j * rows + k;
 
-				var x = Math.min(rows - 1.5, Math.max(0.5, k - speed * (rows - 2) * xs[n]));
+				var x = Math.min(rows - 1.5, Math.max(0.5, k - speed * xs[n]));
 				var ltCol = x | 0;
 				var rtCol = ltCol + 1;
 				var distFromLeft = x - ltCol;
 
-				var y = Math.min(rows - 1.5, Math.max(0.5, j - speed * (rows - 2) * ys[n]));
+				var y = Math.min(rows - 1.5, Math.max(0.5, j - speed * ys[n]));
 				var yUp = y | 0;
 				var distFromAbove = y - yUp;
 				var upRow = yUp * rows;

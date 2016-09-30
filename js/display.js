@@ -32,18 +32,27 @@ class Display {
 		}
 
 		var d = this.imageData.data;
-		for (var i = 0; i < fluid.ix.length; i++){
-			var n = fluid.ix[i];
-			var k = n * 4;
 
-			// d[k + 0] = Math.abs(fluid.xs[n] * this.params.red) | 0;
-			// d[k + 1] = (fluid.dn[n] * this.params.green) | 0;
-			// d[k + 2] = Math.abs(fluid.ys[n] * this.params.blue) | 0;
+		// for (var i = 0; i < fluid.ix.length; i++){
+		// 	var n = fluid.ix[i];
+		// 	var k = n * 4;
+		//
+		// 	d[k + 0] = Math.abs(fluid.xs[n] * this.params.red) | 0;
+		// 	d[k + 1] = (fluid.dn[n] * this.params.green) | 0;
+		// 	d[k + 2] = Math.abs(fluid.ys[n] * this.params.blue) | 0;
+		//
+		// 	// var pressure = (fluid.cp[n] * 100000) | 0;
+		// 	// d[k + 0] = Math.max(0, pressure);
+		// 	// d[k + 1] = (fluid.dn[n] * this.params.green) | 0;
+		// 	// d[k + 2] = Math.max(0, -pressure);
+		//
+		// 	// d[k + 1] = (200 * fluid.dn[n]) | 0;
+		// }
 
-			var pressure = (fluid.cp[n] * 100000) | 0;
-			d[k + 0] = Math.max(0, pressure);
-			d[k + 1] = (fluid.dn[n] * this.params.green) | 0;
-			d[k + 2] = Math.max(0, -pressure);
+		for (var i = 0; i < fluid.xs.length; i++){
+			d[i * 4 + 0] = Math.abs(fluid.xs[i] * this.params.red) | 0;
+			d[i * 4 + 1] = (fluid.dn[i] * this.params.green) | 0;
+			d[i * 4 + 2] = Math.abs(fluid.ys[i] * this.params.blue) | 0;
 		}
 		bottomCtx.putImageData(this.imageData, 0, 0);
 
@@ -53,12 +62,13 @@ class Display {
 		// T.strokeStyle = 'green';
 		// T.save();
 		// T.scale(scale, scale);
+		// T.lineWidth = 1 / scale;
 		// T.beginPath();
 		// for (var i = 0; i < rows; i++){
 		// 	for (var j = 0; j < rows; j++){
 		// 		var n = i * rows + j;
 		// 		T.moveTo(j, i);
-		// 		T.lineTo(j + fluid.xs[n], i + fluid.ys[n]);
+		// 		T.lineTo(j + fluid.xs[n] * this.params.speed, i + fluid.ys[n] * this.params.speed);
 		// 	}
 		// }
 		// T.stroke();
