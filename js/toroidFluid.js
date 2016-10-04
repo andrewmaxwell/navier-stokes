@@ -95,6 +95,32 @@ class Fluid {
 		}
 	}
 
+	// moveBodies(xc, yc, px, py){
+	// 	var {rows, speed} = this.params;
+	// 	var {xs, ys, dw, rt} = this;
+	//
+	// 	for (var i = 0; i < xc.length; i++){
+	// 		px[i] = xc[i];
+	// 		py[i] = yc[i];
+	//
+	// 		var x0 = Math.floor(xc[i]);
+	// 		var y0 = Math.floor(yc[i]);
+	// 		var distFromLt = speed * (xc[i] - x0);
+	// 		var distFromRt = speed - distFromLt;
+	// 		var distFromUp = yc[i] - y0;
+	// 		var distFromDw = 1 - distFromUp;
+	// 		var t = ((y0 + 1e6 * rows) % rows) * rows + (x0 + 1e6 * rows) % rows;
+	//
+	// 		xc[i] += distFromRt * (distFromDw * xs[t] + distFromUp * xs[dw[t]]) + distFromLt * (distFromDw * xs[rt[t]] + distFromUp * xs[dw[rt[t]]]);
+	// 		yc[i] += distFromRt * (distFromDw * ys[t] + distFromUp * ys[dw[t]]) + distFromLt * (distFromDw * ys[rt[t]] + distFromUp * ys[dw[rt[t]]]);
+	//
+	// 		if (xc[i] < 0 || xc[i] >= rows || yc[i] < 0 || yc[i] >= rows){
+	// 			xc[i] = px[i] = (xc[i] + rows) % rows;
+	// 			yc[i] = py[i] = (yc[i] + rows) % rows;
+	// 		}
+	// 	}
+	// }
+
 	advect(){
 
 		var {rows, speed} = this.params;
@@ -135,18 +161,21 @@ class Fluid {
 	}
 
 	interact(x1, y1, dx, dy){
-		var {rows, pushStrength, pushAmount} = this.params;
+		var {rows, pushStrength, pushAmount, speed} = this.params;
 
 		dx *= rows;
 		dy *= rows;
+
 		var len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+		var amt = pushStrength * len / rows / speed;
+
 		for (var i = 0; i < len; i++) {
 			var x = Math.floor(rows * x1 + i / len * dx);
 			var y = Math.floor(rows * y1 + i / len * dy);
 			var n = x + y * rows;
-			this.xs[n] = dx / len * pushStrength;
-			this.ys[n] = dy / len * pushStrength;
-			this.dn[n] = pushAmount;
+			this.xs[n] = dx * amt;
+			this.ys[n] = dy * amt;
+			this.dn[n] = pushAmount / rows;
 		}
 	}
 }

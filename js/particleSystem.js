@@ -6,9 +6,16 @@ class ParticleSystem {
 		this.yc = new Float32Array(this.num);
 		this.px = new Float32Array(this.num);
 		this.py = new Float32Array(this.num);
+	}
+	reset(){
+		var {rows} = this.params;
 		for (var i = 0; i < this.num; i++){
-			this.xc[i] = this.px[i] = Math.random() * params.rows;
-			this.yc[i] = this.py[i] = Math.random() * params.rows;
+			this.xc[i] = this.px[i] = Math.random() * rows;
+			this.yc[i] = this.py[i] = Math.random() * rows;
+			// var d = i / this.num;
+			// var a = d * 20 * Math.PI;
+			// this.xc[i] = this.px[i] = rows / 2 * (1 + d * Math.sin(a));
+			// this.yc[i] = this.py[i] = rows / 2 * (1 + d * Math.cos(a));
 		}
 	}
 	iterate(fluid){

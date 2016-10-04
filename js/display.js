@@ -86,8 +86,8 @@ class Display {
 
 		var {num, xc, yc, px, py} = particles;
 		for (var i = 0; i < num; i++){
-			T.moveTo(xc[i], yc[i]);
-			T.lineTo(px[i], py[i]);
+			T.moveTo(px[i], py[i]);
+			T.lineTo(xc[i], yc[i]);
 		}
 		T.stroke();
 		T.restore();
