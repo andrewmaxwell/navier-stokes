@@ -11,7 +11,7 @@ const Demo = require('./demo');
 
 var params = {
 	rows: 50,
-	iterations: 50,
+	iterations: 25,
 	diffusion: 0.999,
 	speed: 10,
 	pushStrength: 50,
@@ -53,7 +53,7 @@ display.topCanvas.onmousemove = e => {
 };
 
 var gui = new window.dat.GUI();
-gui.add(params, 'rows', 50, 300).step(1).onChange(() => fluid.reset());
+gui.add(params, 'rows', 10, 100).step(1).onChange(() => fluid.reset());
 gui.add(params, 'iterations', 1, 200);
 gui.add(params, 'diffusion', 0.99, 1);
 gui.add(params, 'speed', 0, 100);
